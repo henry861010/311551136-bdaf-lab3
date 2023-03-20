@@ -6,28 +6,37 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract lab3 is ERC20 {
-	constructor() ERC20("311551136-bdaf-lab3", "lab3") {
+contract lab3 {
+
+	mapping(address => mapping(address => uint256)) account_record;  //first: client, second: token(smart contract)
+	event transfer(address from,address to,address token,uint256 amount);
+	
+	constructor() {
     	}
     	
     	
- 
-    	modifier IFenough(address account,uint256 amount){
-    		require(balanceOf(account)>=amount,"The balance of account is not enough.");
+    	modifier IFlegal(address token,uint256 amount){
+    		require(account_record[msg.sender][token]>=amount,"the amount of token in the account is not enough!");
     		_;
     	}
     	
-    	modifier IFowner(address account){
-    		require(msg.sender==account,"This account is not belong to you.So you can't do it");
-    		_;
-    	}
     	
-    	
-    	function deposit(address account, uint256 amount) IFowner(account) public {
-    		_mint(account, amount);
+    	function deposit(address token, uint256 amount) external {
+    		try ERC20(token).transferFrom(msg.sender,address(this),amount){
+    			account_record[msg.sender][token]+=amount;
+    			emit transfer(msg.sender,address(this),token,amount);
+    		}catch{
+    			revert("transfer failed");
+    		}
+
     	}
 
-	function withdraw(address account, uint256 amount) IFowner(account)  IFenough(account,amount) public {
-		_burn(account, amount);
+	function withdraw(address token, uint256 amount) IFlegal(token,amount) external {
+		try ERC20(token).transfer(msg.sender,amount){
+			account_record[msg.sender][token]-=amount;
+			emit transfer(address(this),msg.sender,token,amount);
+		}catch{
+			revert("transfer failed");
+		}
 	}
 }
